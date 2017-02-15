@@ -42,14 +42,14 @@ metadata {
     simulator {
     }
 
-    tiles {
-        standardTile("switch1", "device.switch1",canChangeIcon: true) {
-            state "on", label: '${name}', action: "off1", icon: "st.switches.switch.on", backgroundColor: "#0044ff"
-            state "off", label: '${name}', action: "on1", icon: "st.switches.switch.off", backgroundColor: "#ffffff"
+    tiles(scale:2){
+        standardTile("switch1", "device.switch1", width: 2, height: 2, canChangeIcon: false) {
+            state "on", label: '${name}', action: "off1", icon: "st.Lighting.light11", backgroundColor: "#0044ff"
+            state "off", label: '${name}', action: "on1", icon: "st.Lighting.light13", backgroundColor: "#ffffff"
         }
-        standardTile("switch2", "device.switch2",canChangeIcon: true) {
-            state "on", label: '${name}', action: "off2", icon: "st.switches.switch.on", backgroundColor: "#0044ff"
-            state "off", label: '${name}', action: "on2", icon: "st.switches.switch.off", backgroundColor: "#ffffff"
+        standardTile("switch2", "device.switch2", width: 2, height: 2, canChangeIcon: false) {
+            state "on", label: '${name}', action: "off2", icon: "st.Lighting.light11", backgroundColor: "#0044ff"
+            state "off", label: '${name}', action: "on2", icon: "st.Lighting.light13", backgroundColor: "#ffffff"
         }
         standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
             state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -73,70 +73,6 @@ def parse(String description) {
     return result
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
-    def result
-    if (cmd.value == 0) {
-        result = createEvent(name: "switch", value: "off")
-    } else {
-        result = createEvent(name: "switch", value: "on")
-    }
-    return result
-}
-
-def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
-    sendEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
-    def result = []
-    result << zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:38, command:1).format()
-    result << zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:2, commandClass:38, command:3).format()
-    response(delayBetween(result, settings.delayMillis)) // returns the result of reponse()
-}
-
-def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCapabilityReport cmd) {
-    log.debug "multichannelv3.MultiChannelCapabilityReport $cmd"
-    if (cmd.endPoint == 2 ) {
-        def currstate = device.currentState("switch2").getValue()
-        if (currstate == "on")
-        	sendEvent(name: "switch2", value: "off", isStateChange: true, display: false)
-        else if (currstate == "off")
-        	sendEvent(name: "switch2", value: "on", isStateChange: true, display: false)
-    }
-    else if (cmd.endPoint == 1 ) {
-        def currstate = device.currentState("switch1").getValue()
-        if (currstate == "on")
-        sendEvent(name: "switch1", value: "off", isStateChange: true, display: false)
-        else if (currstate == "off")
-        sendEvent(name: "switch1", value: "on", isStateChange: true, display: false)
-    }
-}
-
-def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
-	def map = [ name: "switch$cmd.sourceEndPoint" ]
-
-	if (cmd.commandClass == 38){
-        if (cmd.parameter == [0]) {
-            map.value = "off"
-        }
-        if (cmd.parameter == [255]) {
-            map.value = "on"
-        }
-        createEvent(map)
-    }
-}
-
-def zwaveEvent(physicalgraph.zwave.Command cmd) {
-    // This will capture any commands not handled by other instances of zwaveEvent
-    // and is recommended for development so you can see every command the device sends
-    return createEvent(descriptionText: "${device.displayName}: ${cmd}")
-}
-
-def refresh() {
-    log.debug "Executing 'refresh'"
-	def cmds = []
-	cmds << zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:37, command:2).format()
-    cmds << zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:2, commandClass:37, command:2).format()
-	delayBetween(cmds, settings.delayMillis)
-}
-
 def poll() {
     log.debug "Executing 'poll'"
 	delayBetween([
@@ -146,45 +82,25 @@ def poll() {
 }
 
 def on1() {
-    //log.debug "Executing 'on1' with delay of ${settings.delayMillis}"
-    //delayBetween([
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:38, command:1, parameter:[255]).format(),
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:38, command:3).format()
-    //], settings.delayMillis)
-    log.debug "Relay 1 on()"
-	sendEvent(name: "switch1", value: "on")
+    log.debug "ZV 1 on()"
+	sendEvent(name: "switch1", value: "ON")
 	"st cmd 0x${device.deviceNetworkId} 0x38 0x0006 0x1 {}"
 }
 
 def off1() {
-    //log.debug "Executing 'off1'"
-    //delayBetween([
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:38, command:1, parameter:[0]).format(),
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:1, destinationEndPoint:1, commandClass:38, command:3).format()
-    //], settings.delayMillis)
-    log.debug "Relay 1 off()"
+    log.debug "ZV 1 off()"
 	sendEvent(name: "switch1", value: "off")
 	"st cmd 0x${device.deviceNetworkId} 0x38 0x0006 0x0 {}"
 }
 
 def on2() {
-    //log.debug "Executing 'on2'"
-    //delayBetween([
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:1, parameter:[255]).format(),
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:3).format()
-    //], settings.delayMillis)
-    log.debug "Relay 2 on()"
+    log.debug "ZV 2 on()"
 	sendEvent(name: "switch2", value: "on")
 	"st cmd 0x${device.deviceNetworkId} 0x38 0x0006 0x3 {}"
 }
 
 def off2() {
-    //log.debug "Executing 'off2'"
-    //delayBetween([
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:1, parameter:[0]).format(),
-    //    zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint:2, destinationEndPoint:2, commandClass:37, command:2).format()
-    //], settings.delayMillis)
-    log.debug "Relay 2 off()"
+    log.debug "ZV 2 off()"
 	sendEvent(name: "switch2", value: "off")
 	"st cmd 0x${device.deviceNetworkId} 0x38 0x0006 0x4 {}"
 }
